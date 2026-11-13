@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Horizon | Pianificazione logistica</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="controls-panel">
+            <h1 class="panel-title">
+                <i class="fa-solid fa-truck-fast" aria-hidden="true"></i> Delivery Horizon
+            </h1>
+
+            <div class="input-group">
+                <label for="languageSelect" data-i18n="language">Lingua</label>
+                <select id="languageSelect">
+                    <option value="it" lang="it">Italiano</option>
+                    <option value="en" lang="en">English</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="orderDate" data-i18n="orderDate">Data Registrazione Ordine</label>
+                <input type="date" id="orderDate">
+            </div>
+
+            <div class="input-group">
+                <label for="weeksSupplier" data-i18n="leadTime">Lead Time Fornitore (Settimane)</label>
+                <div class="number-input">
+                    <button type="button" data-lead-time-step="-1" aria-label="Riduci il lead time" data-i18n-aria-label="leadDown">−</button>
+                    <input type="number" id="weeksSupplier" value="3" min="1">
+                    <button type="button" data-lead-time-step="1" aria-label="Aumenta il lead time" data-i18n-aria-label="leadUp">+</button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="weeksCustomer" data-i18n="customerEstimate">Stima Consegna Cliente (+ 7gg fissi)</label>
+                <div class="number-input number-input-readonly">
+                    <button type="button" disabled aria-hidden="true">−</button>
+                    <input type="number" id="weeksCustomer" value="4" min="1" readonly>
+                    <button type="button" disabled aria-hidden="true">+</button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="customerRequestedDate" data-i18n="requestDate">Richiesta Specifica Cliente</label>
+                <input type="date" id="customerRequestedDate">
+            </div>
+
+            <label class="holiday-toggle" for="skipNationalHolidays">
+                <input type="checkbox" id="skipNationalHolidays" checked>
+                <span data-i18n="skipHolidays">Salta le festività nazionali italiane</span>
+            </label>
+
+            <button type="button" class="btn-settings" id="openClosureModal">
+                <i class="fa-solid fa-calendar-xmark" aria-hidden="true"></i> <span data-i18n="manageClosures">Pianifica Chiusure Aziendali</span>
+            </button>
+        </aside>
+
+        <main class="view-panel">
+            <div id="warningMessage" role="status" hidden></div>
+
+            <section id="summary">
+                <div class="metric-card order" data-scroll-date="order" role="button" tabindex="0">
+                    <div class="metric-label" data-i18n="order">Data Ordine</div>
+                    <div class="metric-value" id="summaryOrderDate">--</div>
+                </div>
+                <div class="metric-card supplier" data-scroll-date="supplier" role="button" tabindex="0">
+                    <div class="metric-label" data-i18n="supplier">Arrivo Merce Stimato</div>
+                    <div class="metric-value" id="summarySupplierDate">--</div>
+                </div>
+                <div class="metric-card customer" data-scroll-date="customer" role="button" tabindex="0">
+                    <div class="metric-label" data-i18n="customer">Consegna Cliente</div>
+                    <div class="metric-value" id="summaryCustomerDate">--</div>
+                </div>
+                <div class="metric-card suggested" id="summarySuggestedCard" hidden>
+                    <div class="metric-label" data-i18n="suggested">Richiesta Non Fattibile</div>
+                    <div class="metric-value" id="summarySuggestedDate">--</div>
+                </div>
+            </section>
+
+            <div class="calendar-wrapper">
+                <div id="calendarContainer"></div>
+
+                <div class="bottom-tools">
+                    <div id="legend">
+                        <div class="legend-item"><div class="legend-color legend-color-order"></div><span data-i18n="legendOrder">Ordine</span></div>
+                        <div class="legend-item"><div class="legend-color legend-color-supplier"></div><span data-i18n="legendSupplier">Fornitore</span></div>
+                        <div class="legend-item"><div class="legend-color legend-color-customer"></div><span data-i18n="legendCustomer">Cliente</span></div>
+                        <div class="legend-item"><div class="legend-color legend-color-incompatible"></div><span data-i18n="legendIncompatible">Incompatibile</span></div>
+                        <div class="legend-item"><div class="legend-color legend-color-closure"></div><span data-i18n="legendClosure">Chiusura/Ferie</span></div>
+                    </div>
+                    <button type="button" id="expandButton" aria-controls="calendarContainer" aria-expanded="false">
+                        Carica Anno Successivo
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="dateModal" class="modal-overlay" hidden>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="dateDetails">Dettaglio Giorno</h3>
+                <button type="button" class="modal-close" data-close-modal="dateModal" aria-label="Chiudi dettaglio giorno" data-i18n-aria-label="closeDate">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <span id="modalDateDisplay" class="modal-date">--/--/----</span>
+            <div class="modal-actions">
+                <button type="button" class="modal-btn btn-order" data-set-date="order" data-i18n="setOrder">Imposta come Data Ordine</button>
+                <button type="button" class="modal-btn btn-request" data-set-date="request" data-i18n="setRequest">Imposta come Richiesta Cliente</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="closureModal" class="modal-overlay" hidden>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="closures">Ferie &amp; Chiusure</h3>
+                <button type="button" class="modal-close" data-close-modal="closureModal" aria-label="Chiudi ferie e chiusure" data-i18n-aria-label="closeClosures">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div class="closure-list" id="closureList"></div>
+
+            <div class="add-closure-form">
+                <label class="closure-form-label" for="newClosureName" data-i18n="newClosure">Nuovo Periodo di Chiusura</label>
+                <input type="text" class="closure-name-input" id="newClosureName" placeholder="Descrizione (es. Ferie Estive)" data-i18n-placeholder="closurePlaceholder">
+                <div class="add-closure-row">
+                    <input type="date" id="newClosureStart" aria-label="Data inizio chiusura" data-i18n-aria-label="closureStart">
+                    <input type="date" id="newClosureEnd" aria-label="Data fine chiusura" data-i18n-aria-label="closureEnd">
+                </div>
+                <button type="button" class="modal-btn btn-save-closure" id="saveClosure" data-i18n="saveClosure">Salva Chiusura</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
